@@ -137,12 +137,7 @@ function App() {
 
   return (
     <div className="App">
-      <div>Current Direction: {direction}</div>
-      <div>
-        Current Position: x: {roombaPosition.x} y: {roombaPosition.y}
-      </div>
-
-      <div>
+      <div className="buttons">
         <button onClick={handleTurnRight}>Turn Right</button>
         <button onClick={handleMoveForward}>Move Forward</button>
       </div>
@@ -152,6 +147,11 @@ function App() {
         direction={direction}
         blockers={blockers}
       />
+
+      <br />
+      <a href="https://github.com/nicodee/roomba-zoomba" target="blank">
+        Link to repo on Github
+      </a>
     </div>
   );
 }

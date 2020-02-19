@@ -1,3 +1,16 @@
+.App {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  margin-top: 50px;
+}
+
+.buttons {
+  display: flex;
+  justify-content: space-between;
+  width: 200px;
+}
+
 .Grid {
   border: 2px solid black;
   height: 400px;
