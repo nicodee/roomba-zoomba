@@ -16,7 +16,10 @@
   flex: 1;
   border: 1px solid black;
   text-align: center;
-  font-size: 2em;
+  font-size: 1.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .Roomba {
@@ -27,7 +30,8 @@
   margin: auto;
 }
 
-.Roomba > span {
+.Roomba > span,
+.obstacle > span {
   margin: auto;
 }
 
