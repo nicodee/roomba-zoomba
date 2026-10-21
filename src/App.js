@@ -4,7 +4,7 @@ import "./App.css";
 function Cell({ position, roombaPosition, direction, blockers }) {
   const cellIsBlocker = isCellAnObstacle(blockers, position);
   return (
-    <div className="Cell" roombaPosition={roombaPosition} position={position}>
+    <div className="Cell">
       {!cellIsBlocker ? (
         position.x === roombaPosition.x && position.y === roombaPosition.y ? (
           <Roomba direction={direction} />
