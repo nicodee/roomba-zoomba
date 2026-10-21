@@ -2,7 +2,17 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import * as serviceWorker from './serviceWorker';
+import { registerSW } from 'virtual:pwa-register';
+
+const updateSW = registerSW({
+  onNeedRefresh() {
+    console.log('New content available, reloading...');
+    updateSW(true);
+  },
+  onOfflineReady() {
+    console.log('App ready to work offline');
+  },
+});
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -10,5 +20,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-serviceWorker.unregister();
