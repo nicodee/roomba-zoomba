@@ -256,11 +256,18 @@ function GameWorld({
       <ambientLight intensity={0.75} />
       <directionalLight
         position={[12, 24, 12]}
-        intensity={1.2}
+        intensity={1.25}
         castShadow
-        shadow-mapSize={[1024, 1024]}
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0001}
+        shadow-camera-left={-8}
+        shadow-camera-right={8}
+        shadow-camera-top={20}
+        shadow-camera-bottom={-20}
+        shadow-camera-near={0.1}
+        shadow-camera-far={60}
       />
-      <fog attach="fog" args={["#fef3c7", 22, 75]} />
+      <fog attach="fog" args={["#fef3c7", 20, 75]} />
 
       {/* Render Infinite Floor Segments */}
       {chunks.map((chunk) => (
