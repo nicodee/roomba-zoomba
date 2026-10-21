@@ -6,6 +6,7 @@ import { TrackSegment, CHUNK_LENGTH, LANE_WIDTH } from "./TrackSegment";
 import { GroundCord, CoffeeTable, CardboardBoxes, DustBunny, VacuumMagnetPickup } from "./Obstacles";
 import { useRunnerControls } from "../../hooks/useRunnerControls";
 import { audioEngine } from "../../utils/audioEngine";
+import { ParticleSystem } from "./ParticleSystem";
 
 const GRAVITY = -26;
 const JUMP_FORCE = 7.8;
@@ -85,6 +86,7 @@ function GameWorld({
   const slideTimerRef = useRef(0);
   const rollRef = useRef(0);
   const roombaGroupRef = useRef();
+  const particlesRef = useRef();
 
   const [chunks, setChunks] = useState(() => [
     { id: 0, z: 0, ...generateChunkContent(0, 0) },
@@ -107,6 +109,7 @@ function GameWorld({
         isJumpingRef.current = true;
         vyRef.current = JUMP_FORCE;
         audioEngine.playJumpBoing();
+        particlesRef.current?.emitJumpPuff(playerXRef.current, playerYRef.current, playerZRef.current);
       }
     },
     onDuck: () => {
@@ -156,6 +159,7 @@ function GameWorld({
     if (isSlidingRef.current) {
       slideTimerRef.current -= delta;
       scaleY = 0.45;
+      particlesRef.current?.emitSlideSparks(playerXRef.current, playerYRef.current, playerZRef.current);
       if (slideTimerRef.current <= 0) {
         isSlidingRef.current = false;
       }
@@ -224,6 +228,7 @@ function GameWorld({
           if (item.type === "dust") {
             dustStreakRef.current += 1;
             audioEngine.playDustChime(dustStreakRef.current);
+            particlesRef.current?.emitDustBurst(item.x, item.y, item.z);
             onUpdateStats?.({ addDust: 1 });
           } else if (item.type === "magnet") {
             audioEngine.playDustChime(4);
@@ -289,6 +294,9 @@ function GameWorld({
           })}
         </group>
       ))}
+
+      {/* Visual Particle Emitters */}
+      <ParticleSystem ref={particlesRef} />
 
       {/* 3D Roomba Model Group */}
       <group ref={roombaGroupRef}>
