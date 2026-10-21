@@ -1,0 +1,222 @@
+.runner-hud-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+  padding: 16px 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  user-select: none;
+}
+
+.runner-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.runner-title h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  letter-spacing: 1px;
+  color: #1e293b;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.runner-stat-badge {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  padding: 8px 16px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.sound-toggle-btn {
+  pointer-events: auto;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease;
+}
+
+.sound-toggle-btn:hover {
+  transform: scale(1.05);
+}
+
+.magnet-timer-card {
+  align-self: center;
+  background: rgba(14, 165, 233, 0.9);
+  padding: 8px 18px;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(56, 189, 248, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.magnet-label {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.magnet-bar-track {
+  width: 140px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.magnet-bar-fill {
+  height: 100%;
+  background: #ffffff;
+  transition: width 0.1s linear;
+}
+
+.runner-controls-footer {
+  align-self: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(6px);
+  color: #cbd5e1;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.runner-controls-footer strong {
+  color: #38bdf8;
+}
+
+/* Game Over Modal */
+.game-over-modal-backdrop {
+  pointer-events: auto;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-over-modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 32px 40px;
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.crash-icon {
+  font-size: 3.5rem;
+  margin-bottom: 8px;
+}
+
+.game-over-modal-card h2 {
+  margin: 0 0 6px 0;
+  font-size: 1.8rem;
+  color: #0f172a;
+}
+
+.crash-subtitle {
+  color: #64748b;
+  margin: 0 0 20px 0;
+  font-size: 0.95rem;
+}
+
+.results-summary {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.result-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1rem;
+}
+
+.res-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.res-value {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.restart-run-btn {
+  background: #0284c7;
+  color: white;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 12px;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: 0 8px 16px rgba(2, 132, 199, 0.3);
+  transition: all 0.15s ease;
+}
+
+.restart-run-btn:hover {
+  background: #0369a1;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(2, 132, 199, 0.4);
+}

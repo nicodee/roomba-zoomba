@@ -1,28 +1,39 @@
-import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
-import App from './App';
+import React from "react";
+import { render, fireEvent } from "@testing-library/react";
+import { RunnerHUD } from "./components/3d/RunnerHUD";
 
-test('renders game controls and github link', () => {
-  const { getByText } = render(<App />);
-  expect(getByText('Turn Right')).toBeInTheDocument();
-  expect(getByText('Move Forward')).toBeInTheDocument();
-  expect(getByText(/Link to repo on Github/i)).toBeInTheDocument();
+test("renders runner HUD metrics: distance and dust count", () => {
+  const { getByTestId, getByText } = render(
+    <RunnerHUD distance={120} dustCount={15} />
+  );
+  expect(getByText(/ROOMBA ZOOMBA 3D/i)).toBeInTheDocument();
+  expect(getByTestId("distance-stat")).toHaveTextContent("120m");
+  expect(getByTestId("dust-stat")).toHaveTextContent("15");
 });
 
-test('renders the roomba and allows turning right', () => {
-  const { getByText, getByLabelText } = render(<App />);
-  const roomba = getByLabelText('roomba');
-  expect(roomba).toHaveClass('right');
-
-  const turnRightButton = getByText('Turn Right');
-  fireEvent.click(turnRightButton);
-  expect(roomba).toHaveClass('down');
+test("renders magnet active status bar when powerup is active", () => {
+  const { getByText } = render(
+    <RunnerHUD distance={50} dustCount={5} activeMagnet={true} magnetTimeLeft={6.5} />
+  );
+  expect(getByText(/VACUUM MAGNET ACTIVE!/i)).toBeInTheDocument();
 });
 
-test('allows roomba to move forward', () => {
-  const { getByText } = render(<App />);
-  const moveForwardButton = getByText('Move Forward');
-  // Initial position is (0, 0) facing right; moving forward moves to (1, 0)
-  fireEvent.click(moveForwardButton);
-  expect(moveForwardButton).toBeInTheDocument();
+test("renders game over modal on crash and calls onRestart when clicked", () => {
+  const handleRestart = vi.fn();
+  const { getByTestId, getByText } = render(
+    <RunnerHUD
+      distance={340}
+      dustCount={42}
+      isGameOver={true}
+      onRestart={handleRestart}
+    />
+  );
+
+  expect(getByTestId("gameover-modal")).toBeInTheDocument();
+  expect(getByText(/ROOMBA CRASHED!/i)).toBeInTheDocument();
+  expect(getByText(/340 meters/i)).toBeInTheDocument();
+
+  const restartBtn = getByText(/RUN AGAIN/i);
+  fireEvent.click(restartBtn);
+  expect(handleRestart).toHaveBeenCalledTimes(1);
 });
