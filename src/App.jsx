@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, Component } from "react";
 import "./App.css";
 import { RunnerCanvas } from "./components/3d/RunnerCanvas";
 import { useJuice } from "./hooks/useJuice";
@@ -15,6 +15,31 @@ import {
   toggleMute,
   getIsMuted,
 } from "./utils/audioSynth";
+
+class SafeErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Caught in ErrorBoundary:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="error-fallback-card">
+          <h3>⚠️ Viewport Error</h3>
+          <p>{this.state.error?.message || "An unexpected error occurred."}</p>
+          <button onClick={() => this.setState({ hasError: false })}>Reload 3D View</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const INITIAL_DUST_TILES = [
   { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 1 }, { x: 5, y: 2 },
@@ -114,7 +139,6 @@ function Roomba({ direction, deformation }) {
 }
 
 function App() {
-  // Mode Selection: "3d" (default) or "2d"
   const [activeMode, setActiveMode] = useState("3d");
 
   // 2D State
@@ -128,10 +152,6 @@ function App() {
   const [streak, setStreak] = useState(0);
   const [particles, setParticles] = useState([]);
   const [muted, setMuted] = useState(getIsMuted());
-
-  // 3D Stats
-  const [runnerDistance, setRunnerDistance] = useState(0);
-  const [runnerDust, setRunnerDust] = useState(0);
 
   // GLTF benchmark state
   const [gltfLoading, setGltfLoading] = useState(false);
@@ -416,32 +436,29 @@ function App() {
 
       {/* 3D ENDLESS RUNNER VIEW */}
       {activeMode === "3d" && (
-        <div className="runner-3d-container">
-          <RunnerCanvas
-            onDistanceChange={(d) => setRunnerDistance(d)}
-            onDustCollect={(dust) => setRunnerDust(dust)}
-            onGameOver={(d, dust) => console.log("Run Over:", d, dust)}
-          />
+        <SafeErrorBoundary>
+          <div className="runner-3d-container">
+            <RunnerCanvas />
 
-          {/* Blender 3D Model Stage & Shadow Inspector Below */}
-          <div className="runner-secondary-stage">
-            <ModelViewer3D
-              deformation={deformation}
-              isHitstopActive={isHitstopActive}
-              cameraShake={cameraShake}
-            />
+            <div className="runner-secondary-stage">
+              <ModelViewer3D
+                deformation={deformation}
+                isHitstopActive={isHitstopActive}
+                cameraShake={cameraShake}
+              />
 
-            <JuiceInspector
-              onTriggerTrauma={(amt) => addTrauma(amt)}
-              onTriggerHitstop={(ms) => triggerHitstop(ms)}
-              onTriggerSquash={(type) => triggerSquashStretch(type)}
-              onTriggerImpact={(sev) => triggerCollisionImpact(sev)}
-              onTestGLTFLoad={handleTestGLTFLoad}
-              gltfLoading={gltfLoading}
-              gltfResult={gltfResult}
-            />
+              <JuiceInspector
+                onTriggerTrauma={(amt) => addTrauma(amt)}
+                onTriggerHitstop={(ms) => triggerHitstop(ms)}
+                onTriggerSquash={(type) => triggerSquashStretch(type)}
+                onTriggerImpact={(sev) => triggerCollisionImpact(sev)}
+                onTestGLTFLoad={handleTestGLTFLoad}
+                gltfLoading={gltfLoading}
+                gltfResult={gltfResult}
+              />
+            </div>
           </div>
-        </div>
+        </SafeErrorBoundary>
       )}
 
       {/* 2D CLASSIC SWEEPER VIEW (Always mounted for testing & toggle) */}
