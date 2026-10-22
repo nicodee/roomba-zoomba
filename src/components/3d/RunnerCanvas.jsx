@@ -14,6 +14,43 @@ const LANE_WIDTH = 2.2;
 const CHUNK_LENGTH = 40;
 const INITIAL_SPEED = 14;
 
+// Room Volumetric Profiles for dynamic camera breathing and scale
+export const ROOM_PROFILES = {
+  hallway: {
+    id: "hallway",
+    name: "Entry Hallway",
+    camFov: 55,
+    camHeight: 3.0,
+    camDist: 4.8,
+    wallWidth: 7.2,
+    floorColor: "#d97706",
+    floorRoughness: 0.55,
+    floorMetalness: 0.08,
+  },
+  living_room: {
+    id: "living_room",
+    name: "Grand Living Room",
+    camFov: 68,
+    camHeight: 3.8,
+    camDist: 5.8,
+    wallWidth: 15.0,
+    floorColor: "#881337", // Crimson Persian Area Rug
+    floorRoughness: 0.85,
+    floorMetalness: 0.02,
+  },
+  kitchen: {
+    id: "kitchen",
+    name: "Chef's Kitchen",
+    camFov: 60,
+    camHeight: 3.2,
+    camDist: 5.2,
+    wallWidth: 11.0,
+    floorColor: "#f8fafc", // Glossy Ceramic White Tile
+    floorRoughness: 0.15,
+    floorMetalness: 0.40,
+  },
+};
+
 export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
   const mountRef = useRef(null);
   const restartRef = useRef(null);
@@ -35,12 +72,18 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     isDead: false,
     trauma: 0,
     invincibleTimer: 2.0,
-    // Room level mission state
     activeZoneIndex: 0,
     dustInActiveRoom: 0,
     isDoorUnlocked: false,
     roomStartTime: performance.now(),
     battery: 100,
+    // Volumetric transition & 90-degree corner drift state
+    cornerTurnProgress: 0,
+    targetCamFov: 55,
+    currentCamFov: 55,
+    targetCamHeight: 3.0,
+    currentCamHeight: 3.0,
+    lastThresholdCrossed: -1,
   });
 
   const [hudStats, setHudStats] = useState({
@@ -121,8 +164,8 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     scene.background = new THREE.Color("#fef3c7");
     scene.fog = new THREE.Fog("#fef3c7", 18, 85);
 
-    const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
-    camera.position.set(0, 3.2, 5.2);
+    const camera = new THREE.PerspectiveCamera(55, width / height, 0.1, 120);
+    camera.position.set(0, 3.0, 4.8);
 
     const ambientLight = new THREE.AmbientLight("#ffffff", 0.75);
     scene.add(ambientLight);
@@ -140,7 +183,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     const roombaGroup = new THREE.Group();
     scene.add(roombaGroup);
 
-    // Chassis
     const chassisGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.18, 36);
     const chassisMat = new THREE.MeshStandardMaterial({
       color: "#1e293b",
@@ -152,7 +194,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     chassisMesh.position.y = 0.09;
     roombaGroup.add(chassisMesh);
 
-    // Beveled Rim
     const rimGeo = new THREE.TorusGeometry(0.65, 0.025, 16, 48);
     rimGeo.rotateX(Math.PI / 2);
     const rimMat = new THREE.MeshStandardMaterial({ color: "#475569", roughness: 0.25, metalness: 0.6 });
@@ -160,28 +201,24 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     rimMesh.position.y = 0.18;
     roombaGroup.add(rimMesh);
 
-    // Shutline
     const seamGeo = new THREE.TorusGeometry(0.52, 0.012, 12, 48);
     seamGeo.rotateX(Math.PI / 2);
     const seamMesh = new THREE.Mesh(seamGeo, new THREE.MeshBasicMaterial({ color: "#090d16" }));
     seamMesh.position.y = 0.182;
     roombaGroup.add(seamMesh);
 
-    // Faceplate
     const faceplateGeo = new THREE.CylinderGeometry(0.50, 0.50, 0.02, 36);
     const faceplateMat = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.35, metalness: 0.75 });
     const faceplateMesh = new THREE.Mesh(faceplateGeo, faceplateMat);
     faceplateMesh.position.y = 0.185;
     roombaGroup.add(faceplateMesh);
 
-    // Rubber Bumper
     const bumperGeo = new THREE.BoxGeometry(0.92, 0.15, 0.28);
     const bumperMat = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.85, metalness: 0.05 });
     const bumperMesh = new THREE.Mesh(bumperGeo, bumperMat);
     bumperMesh.position.set(0, 0.09, -0.45);
     roombaGroup.add(bumperMesh);
 
-    // Halo LED Clean Button
     const haloGeo = new THREE.TorusGeometry(0.12, 0.018, 16, 32);
     haloGeo.rotateX(Math.PI / 2);
     const haloMat = new THREE.MeshStandardMaterial({
@@ -200,7 +237,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     buttonMesh.position.set(0, 0.195, 0.08);
     roombaGroup.add(buttonMesh);
 
-    // Turret with Optics
     const turretGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 28);
     const turretMat = new THREE.MeshStandardMaterial({ color: "#0284c7", roughness: 0.12, metalness: 0.40 });
     const turretMesh = new THREE.Mesh(turretGeo, turretMat);
@@ -217,7 +253,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     diodeMesh.position.set(0, 0.23, -0.17);
     roombaGroup.add(diodeMesh);
 
-    // Bristle Brushes
     function createBrushRotor() {
       const rotor = new THREE.Group();
       const boltGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.025, 6);
@@ -243,7 +278,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     brushRight.position.set(0.46, 0.025, -0.42);
     roombaGroup.add(brushRight);
 
-    // Headlights
     function createHeadlight(xPos) {
       const spot = new THREE.SpotLight("#fffbeb", 1.8, 14, Math.PI / 7, 0.45, 1.2);
       spot.position.set(xPos, 0.14, -0.48);
@@ -258,12 +292,10 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     createHeadlight(-0.28);
     createHeadlight(0.28);
 
-    // Underglow Light
     const underglowLight = new THREE.PointLight("#06b6d4", 1.8, 3.5, 2.0);
     underglowLight.position.set(0, 0.06, 0);
     roombaGroup.add(underglowLight);
 
-    // Ground Shadow
     const shadowGeo = new THREE.CircleGeometry(0.78, 28);
     shadowGeo.rotateX(-Math.PI / 2);
     const shadowMat = new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.5 });
@@ -272,16 +304,18 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     scene.add(shadowMesh);
 
     // ==========================================
-    // TRACK CHUNKS & DOORWAY THRESHOLDS
+    // VOLUMETRIC ROOM CHUNKS & DOORWAY ARCHES
     // ==========================================
     const trackChunks = [];
-    const chunkFloorGeo = new THREE.BoxGeometry(7.2, 0.1, CHUNK_LENGTH);
-    const chunkFloorMat = new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.55, metalness: 0.08 });
 
-    const dividerGeo = new THREE.BoxGeometry(0.06, 0.01, CHUNK_LENGTH);
+    // Distinct floor materials for different rooms
+    const floorMaterials = {
+      hallway: new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.55, metalness: 0.08 }),
+      living_room: new THREE.MeshStandardMaterial({ color: "#881337", roughness: 0.85, metalness: 0.02 }), // Persian Rug
+      kitchen: new THREE.MeshStandardMaterial({ color: "#f8fafc", roughness: 0.15, metalness: 0.40 }),   // Glossy Tile
+    };
+
     const dividerMat = new THREE.MeshBasicMaterial({ color: "#fef3c7", transparent: true, opacity: 0.65 });
-
-    // Doorway Arch Materials
     const archMat = new THREE.MeshStandardMaterial({ color: "#78350f", roughness: 0.7 });
     const doorBeamMat = new THREE.MeshStandardMaterial({
       color: "#f59e0b",
@@ -289,67 +323,81 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       emissiveIntensity: 1.5,
     });
 
-    function createChunk(zOffset, isDoorChunk = false) {
+    function createVolumetricChunk(zOffset, roomType = "hallway", isThreshold = false) {
       const chunkGroup = new THREE.Group();
       chunkGroup.position.z = zOffset;
 
-      const floor = new THREE.Mesh(chunkFloorGeo, chunkFloorMat);
+      const profile = ROOM_PROFILES[roomType] || ROOM_PROFILES.hallway;
+      const width = profile.wallWidth;
+
+      // Floor plane sized to room width
+      const floorGeo = new THREE.BoxGeometry(width, 0.1, CHUNK_LENGTH);
+      const floor = new THREE.Mesh(floorGeo, floorMaterials[roomType] || floorMaterials.hallway);
       floor.receiveShadow = true;
       chunkGroup.add(floor);
 
-      const div1 = new THREE.Mesh(dividerGeo, dividerMat);
+      // Lane dividers
+      const divGeo = new THREE.BoxGeometry(0.06, 0.01, CHUNK_LENGTH);
+      const div1 = new THREE.Mesh(divGeo, dividerMat);
       div1.position.set(-1.1, 0.055, 0);
       chunkGroup.add(div1);
 
-      const div2 = new THREE.Mesh(dividerGeo, dividerMat);
+      const div2 = new THREE.Mesh(divGeo, dividerMat);
       div2.position.set(1.1, 0.055, 0);
       chunkGroup.add(div2);
 
+      // Volumetric Walls / Skirting Boards adjusted to room width
+      const halfW = width / 2;
       const baseboardGeo = new THREE.BoxGeometry(0.2, 0.8, CHUNK_LENGTH);
       const baseboardMat = new THREE.MeshStandardMaterial({ color: "#78350f" });
+
       const bLeft = new THREE.Mesh(baseboardGeo, baseboardMat);
-      bLeft.position.set(-3.6, 0.4, 0);
+      bLeft.position.set(-halfW, 0.4, 0);
       chunkGroup.add(bLeft);
 
       const bRight = new THREE.Mesh(baseboardGeo, baseboardMat);
-      bRight.position.set(3.6, 0.4, 0);
+      bRight.position.set(halfW, 0.4, 0);
       chunkGroup.add(bRight);
 
-      // Doorway Archway on threshold chunks
+      // Crown Molding / Door Header on Threshold
       let doorIndicator = null;
-      if (isDoorChunk) {
-        const archLeft = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.5, 0.4), archMat);
-        archLeft.position.set(-3.5, 1.75, 0);
+      let tmolding = null;
+
+      if (isThreshold) {
+        // Door Jambs
+        const archLeft = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.8, 0.4), archMat);
+        archLeft.position.set(-halfW + 0.1, 1.9, 0);
         chunkGroup.add(archLeft);
 
-        const archRight = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.5, 0.4), archMat);
-        archRight.position.set(3.5, 1.75, 0);
+        const archRight = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.8, 0.4), archMat);
+        archRight.position.set(halfW - 0.1, 1.9, 0);
         chunkGroup.add(archRight);
 
-        const archTop = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.4, 0.4), archMat);
-        archTop.position.set(0, 3.5, 0);
+        // Header Lintel across width
+        const archTop = new THREE.Mesh(new THREE.BoxGeometry(width + 0.4, 0.4, 0.4), archMat);
+        archTop.position.set(0, 3.8, 0);
         chunkGroup.add(archTop);
 
-        // Illuminated Door Header Beam (green when unlocked, amber when cleaning)
-        doorIndicator = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.15, 0.2), doorBeamMat);
-        doorIndicator.position.set(0, 3.3, 0);
+        // Status Beam
+        doorIndicator = new THREE.Mesh(new THREE.BoxGeometry(width - 0.6, 0.16, 0.2), doorBeamMat);
+        doorIndicator.position.set(0, 3.6, 0);
         chunkGroup.add(doorIndicator);
 
-        // Raised Brass T-Molding Floor Threshold
-        const tmolding = new THREE.Mesh(
-          new THREE.BoxGeometry(7.2, 0.04, 0.2),
-          new THREE.MeshStandardMaterial({ color: "#d97706", metalness: 0.9, roughness: 0.2 })
-        );
+        // Raised Brass T-Molding Floor Threshold Strip
+        const tmoldingGeo = new THREE.BoxGeometry(width, 0.04, 0.22);
+        const tmoldingMat = new THREE.MeshStandardMaterial({ color: "#eab308", metalness: 0.9, roughness: 0.2 });
+        tmolding = new THREE.Mesh(tmoldingGeo, tmoldingMat);
         tmolding.position.set(0, 0.07, 0);
         chunkGroup.add(tmolding);
       }
 
       scene.add(chunkGroup);
-      return { group: chunkGroup, z: zOffset, isDoorChunk, doorIndicator };
+      return { group: chunkGroup, z: zOffset, isThreshold, doorIndicator, roomType };
     }
 
     for (let i = 0; i < 4; i++) {
-      trackChunks.push(createChunk(-i * CHUNK_LENGTH, i === 1 || i === 3));
+      const roomKey = i < 2 ? "hallway" : i < 4 ? "living_room" : "kitchen";
+      trackChunks.push(createVolumetricChunk(-i * CHUNK_LENGTH, roomKey, i === 1 || i === 3));
     }
 
     // ==========================================
@@ -460,6 +508,11 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       s.isDoorUnlocked = false;
       s.roomStartTime = performance.now();
       s.battery = 100;
+      s.cornerTurnProgress = 0;
+      s.targetCamFov = 55;
+      s.currentCamFov = 55;
+      s.targetCamHeight = 3.0;
+      s.currentCamHeight = 3.0;
 
       trackChunks.forEach((c, idx) => {
         c.group.position.z = -idx * CHUNK_LENGTH;
@@ -490,6 +543,15 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       s.isDoorUnlocked = false;
       s.roomStartTime = performance.now();
       s.invincibleTimer = 2.0;
+
+      // Trigger 90-degree corner sweep arc
+      s.cornerTurnProgress = 1.0;
+
+      // Update target camera profile for new room
+      const newZone = HOUSE_ZONES[nextIndex];
+      const newProfile = ROOM_PROFILES[newZone.id] || ROOM_PROFILES.hallway;
+      s.targetCamFov = newProfile.camFov;
+      s.targetCamHeight = newProfile.camHeight;
 
       doorBeamMat.color.set("#f59e0b");
       doorBeamMat.emissive.set("#f59e0b");
@@ -544,7 +606,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
       const s = stateRef.current;
 
-      // Pause simulation progress if Victory Modal is up
       if (victoryState) {
         renderer.render(scene, camera);
         return;
@@ -562,7 +623,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         const activeZone = HOUSE_ZONES[s.activeZoneIndex] || HOUSE_ZONES[0];
         const roomCleanliness = Math.min(100, (s.dustInActiveRoom / activeZone.dustQuota) * 100);
 
-        // Check door unlocking milestone
         if (roomCleanliness >= 100 && !s.isDoorUnlocked) {
           s.isDoorUnlocked = true;
           doorBeamMat.color.set("#10b981");
@@ -571,11 +631,19 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           playDockChime();
         }
 
+        // T-Molding Threshold Detection & Tactile Hop
+        const distToDoor = activeZone.doorwayAt - s.distance;
+        if (distToDoor <= 1.5 && distToDoor >= -1.5 && s.lastThresholdCrossed !== activeZone.doorwayAt) {
+          s.lastThresholdCrossed = activeZone.doorwayAt;
+          // Tactile bump impulse
+          s.playerY += 0.04;
+          s.velocityY = 1.2;
+          playThresholdThud();
+        }
+
         // Check Door Threshold Crossing
         if (s.isDoorUnlocked && s.distance >= activeZone.doorwayAt && !victoryState) {
           playRoomClearFanfare();
-          playThresholdThud();
-
           const elapsedSec = Math.round(((currentTime - s.roomStartTime) / 1000) * 10) / 10;
           const coins = Math.round(s.dustInActiveRoom * 1.5);
 
@@ -590,12 +658,14 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           });
         }
 
+        // Horizontal lane lerping
         const targetX = isNaN(s.targetX) ? 0 : s.targetX;
         let currentX = isNaN(s.playerX) ? 0 : s.playerX;
         const dx = targetX - currentX;
         currentX += dx * 16 * dt;
         s.playerX = currentX;
 
+        // Vertical physics
         if (s.isJumping) {
           s.velocityY -= 26 * dt;
           s.playerY += s.velocityY * dt;
@@ -619,7 +689,15 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
         roombaGroup.position.set(currentX, s.playerY, 0);
 
-        const rollAngle = -dx * 0.08;
+        // 90-Degree Corner Drift Turn Sweep Arc Decay
+        let cornerRoll = 0;
+        if (s.cornerTurnProgress > 0) {
+          s.cornerTurnProgress = Math.max(0, s.cornerTurnProgress - 1.2 * dt);
+          // Inward 8-degree camera & chassis sweep arc (0.14 rad)
+          cornerRoll = Math.sin(s.cornerTurnProgress * Math.PI) * 0.14;
+        }
+
+        const rollAngle = -dx * 0.08 + cornerRoll;
         roombaGroup.rotation.z = isNaN(rollAngle) ? 0 : rollAngle;
 
         const scaleY = s.isSliding ? 0.45 : s.isJumping ? 1.2 : 1.0;
@@ -729,6 +807,15 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         }
       }
 
+      // Volumetric Camera Breathing Interpolation (FOV 55° -> 68°)
+      s.currentCamFov += (s.targetCamFov - s.currentCamFov) * 4 * dt;
+      camera.fov = s.currentCamFov;
+      camera.updateProjectionMatrix();
+
+      // Camera Height Spring (Y 3.0m -> 3.8m)
+      s.currentCamHeight += (s.targetCamHeight - s.currentCamHeight) * 4 * dt;
+
+      // Camera Follow Rig & Centrifugal Banking with Inward Corner Roll
       const targetCamX = (isNaN(s.playerX) ? 0 : s.playerX) * 0.4;
       camera.position.x += (targetCamX - camera.position.x) * 8 * dt;
 
@@ -736,9 +823,16 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         s.trauma = Math.max(0, s.trauma - 2.0 * dt);
         const shakeMag = s.trauma * s.trauma * 0.35;
         camera.position.x += (Math.random() - 0.5) * shakeMag;
-        camera.position.y = 3.2 + (Math.random() - 0.5) * shakeMag;
+        camera.position.y = s.currentCamHeight + (Math.random() - 0.5) * shakeMag;
       } else {
-        camera.position.y = 3.2;
+        camera.position.y = s.currentCamHeight;
+      }
+
+      // Camera Roll into 90-degree Corner Sweep
+      if (s.cornerTurnProgress > 0) {
+        camera.rotation.z = Math.sin(s.cornerTurnProgress * Math.PI) * -0.14; // -8 degrees
+      } else {
+        camera.rotation.z = 0;
       }
 
       const lookTargetX = (isNaN(s.playerX) ? 0 : s.playerX) * 0.15;
