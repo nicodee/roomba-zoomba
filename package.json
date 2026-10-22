@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "vite",
     "start": "vite",
-    "build": "vite build",
+    "build:assets": "node scripts/blender/build_assets.js",
+    "build": "npm run build:assets && vite build",
     "preview": "vite preview",
     "test": "vitest run"
   },

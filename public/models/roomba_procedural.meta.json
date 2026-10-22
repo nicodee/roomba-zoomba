@@ -1,5 +1,5 @@
 {
-  "generator": "Headless Asset Generator",
+  "generator": "Headless High-Definition Asset Generator",
   "dracoCompressed": true,
   "shapeKeys": [
     "Basis",
@@ -8,9 +8,19 @@
   ],
   "materials": [
     "Mat_Chassis",
-    "Mat_Turret",
-    "Mat_LED"
+    "Mat_Chassis_Gunmetal",
+    "Mat_Bumper_Matte",
+    "Mat_Turret_Clearcoat",
+    "Mat_Halo_Emissive"
   ],
+  "bakedTextures": {
+    "normalMap": "roomba_normal_1024.png",
+    "ambientOcclusionMap": "roomba_ao_1024.png",
+    "ormMap": "roomba_orm_1024.png",
+    "resolution": "1024x1024"
+  },
   "triangles": 3450,
-  "generatedAt": "2026-10-22T04:34:19.123Z"
+  "fileSizeKB": 0,
+  "maxAllowedSizeMB": 1.5,
+  "generatedAt": "2026-10-22T04:56:31.058Z"
 }

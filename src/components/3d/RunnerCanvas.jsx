@@ -11,7 +11,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
   const restartRef = useRef(null);
 
   const stateRef = useRef({
-    lane: 0, // -1: Left, 0: Center, 1: Right
+    lane: 0,
     targetX: 0,
     playerX: 0,
     playerY: 0.1,
@@ -25,7 +25,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     magnetTime: 0,
     isDead: false,
     trauma: 0,
-    invincibleTimer: 2.0, // 2s invincibility on start
+    invincibleTimer: 2.0,
   });
 
   const [hudStats, setHudStats] = useState({
@@ -47,7 +47,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     const s = stateRef.current;
     if (s.isDead) return;
     if (s.isJumping) {
-      s.velocityY = -18; // Fast fall slam
+      s.velocityY = -18;
     } else if (!s.isSliding) {
       s.isSliding = true;
       s.slideTimer = 0.65;
@@ -89,12 +89,12 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color("#fef3c7");
-    scene.fog = new THREE.Fog("#fef3c7", 18, 80);
+    scene.fog = new THREE.Fog("#fef3c7", 18, 85);
 
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 100);
     camera.position.set(0, 3.2, 5.2);
 
-    const ambientLight = new THREE.AmbientLight("#ffffff", 0.8);
+    const ambientLight = new THREE.AmbientLight("#ffffff", 0.75);
     scene.add(ambientLight);
 
     const sunLight = new THREE.DirectionalLight("#fffbeb", 1.25);
@@ -104,66 +104,173 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     sunLight.shadow.mapSize.height = 1024;
     scene.add(sunLight);
 
-    // 3. Roomba Player Model
+    // ==========================================
+    // HIGH-DEFINITION HERO ROOMBA MODEL ASSEMBLY
+    // ==========================================
     const roombaGroup = new THREE.Group();
     scene.add(roombaGroup);
 
-    // Chassis
-    const chassisGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.18, 32);
-    const chassisMat = new THREE.MeshStandardMaterial({ color: "#1e293b", roughness: 0.4, metalness: 0.2 });
+    // 1. Base Dark Slate Chassis Body
+    const chassisGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.18, 36);
+    const chassisMat = new THREE.MeshStandardMaterial({
+      color: "#1e293b",
+      roughness: 0.55,
+      metalness: 0.15,
+    });
     const chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
     chassisMesh.castShadow = true;
     chassisMesh.position.y = 0.09;
     roombaGroup.add(chassisMesh);
 
-    // Bumper
-    const bumperGeo = new THREE.BoxGeometry(0.9, 0.14, 0.25);
-    const bumperMat = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.8 });
+    // 2. Beveled Outer Edge Specular Rim
+    const rimGeo = new THREE.TorusGeometry(0.65, 0.025, 16, 48);
+    rimGeo.rotateX(Math.PI / 2);
+    const rimMat = new THREE.MeshStandardMaterial({
+      color: "#475569",
+      roughness: 0.25,
+      metalness: 0.6,
+    });
+    const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+    rimMesh.position.y = 0.18;
+    roombaGroup.add(rimMesh);
+
+    // 3. Recessed Dark Panel Seam (Shutline)
+    const seamGeo = new THREE.TorusGeometry(0.52, 0.012, 12, 48);
+    seamGeo.rotateX(Math.PI / 2);
+    const seamMat = new THREE.MeshBasicMaterial({ color: "#090d16" });
+    const seamMesh = new THREE.Mesh(seamGeo, seamMat);
+    seamMesh.position.y = 0.182;
+    roombaGroup.add(seamMesh);
+
+    // 4. Brushed Gunmetal Faceplate Inlay
+    const faceplateGeo = new THREE.CylinderGeometry(0.50, 0.50, 0.02, 36);
+    const faceplateMat = new THREE.MeshStandardMaterial({
+      color: "#334155",
+      roughness: 0.35,
+      metalness: 0.75, // Brushed aluminum appearance
+    });
+    const faceplateMesh = new THREE.Mesh(faceplateGeo, faceplateMat);
+    faceplateMesh.position.y = 0.185;
+    roombaGroup.add(faceplateMesh);
+
+    // 5. Heavy-Duty Matte Rubber Front Bumper
+    const bumperGeo = new THREE.BoxGeometry(0.92, 0.15, 0.28);
+    const bumperMat = new THREE.MeshStandardMaterial({
+      color: "#0f172a",
+      roughness: 0.85, // Matte rubber finish
+      metalness: 0.05,
+    });
     const bumperMesh = new THREE.Mesh(bumperGeo, bumperMat);
     bumperMesh.position.set(0, 0.09, -0.45);
     roombaGroup.add(bumperMesh);
 
-    // Glossy Cyan Turret
-    const turretGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 24);
-    const turretMat = new THREE.MeshStandardMaterial({ color: "#0284c7", roughness: 0.2, metalness: 0.6 });
+    // 6. Glowing Halo LED Clean Button
+    const haloGeo = new THREE.TorusGeometry(0.12, 0.018, 16, 32);
+    haloGeo.rotateX(Math.PI / 2);
+    const haloMat = new THREE.MeshStandardMaterial({
+      color: "#06b6d4",
+      emissive: "#06b6d4",
+      emissiveIntensity: 3.0,
+      roughness: 0.1,
+    });
+    const haloMesh = new THREE.Mesh(haloGeo, haloMat);
+    haloMesh.position.set(0, 0.196, 0.08);
+    roombaGroup.add(haloMesh);
+
+    const buttonGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.015, 24);
+    const buttonMat = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.4 });
+    const buttonMesh = new THREE.Mesh(buttonGeo, buttonMat);
+    buttonMesh.position.set(0, 0.195, 0.08);
+    roombaGroup.add(buttonMesh);
+
+    // 7. LiDAR Turret with Inner Optical Chamber & Lens
+    const turretGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 28);
+    const turretMat = new THREE.MeshStandardMaterial({
+      color: "#0284c7",
+      roughness: 0.12, // Automotive glossy clearcoat
+      metalness: 0.40,
+    });
     const turretMesh = new THREE.Mesh(turretGeo, turretMat);
-    turretMesh.position.set(0, 0.22, -0.05);
+    turretMesh.position.set(0, 0.22, -0.06);
     roombaGroup.add(turretMesh);
 
-    // Emerald LED
-    const ledGeo = new THREE.SphereGeometry(0.04, 16, 16);
-    const ledMat = new THREE.MeshStandardMaterial({ color: "#10b981", emissive: "#10b981", emissiveIntensity: 2.5 });
-    const ledMesh = new THREE.Mesh(ledGeo, ledMat);
-    ledMesh.position.set(0, 0.27, -0.05);
-    roombaGroup.add(ledMesh);
+    // LiDAR Optical Slit & Red Laser Diode
+    const opticGeo = new THREE.BoxGeometry(0.12, 0.03, 0.08);
+    const opticMat = new THREE.MeshBasicMaterial({ color: "#090d16" });
+    const opticMesh = new THREE.Mesh(opticGeo, opticMat);
+    opticMesh.position.set(0, 0.23, -0.15);
+    roombaGroup.add(opticMesh);
 
-    // Brushes
-    const brushGeo = new THREE.CylinderGeometry(0.14, 0.14, 0.02, 3);
-    const brushMat = new THREE.MeshBasicMaterial({ color: "#38bdf8" });
-    const brushLeft = new THREE.Mesh(brushGeo, brushMat);
-    brushLeft.position.set(-0.45, 0.02, -0.4);
+    const diodeGeo = new THREE.SphereGeometry(0.018, 12, 12);
+    const diodeMat = new THREE.MeshBasicMaterial({ color: "#ef4444" });
+    const diodeMesh = new THREE.Mesh(diodeGeo, diodeMat);
+    diodeMesh.position.set(0, 0.23, -0.17);
+    roombaGroup.add(diodeMesh);
+
+    // 8. Dual Whirling Bristle Brushes with Mounting Hex Bolts
+    function createBrushRotor() {
+      const rotor = new THREE.Group();
+      // Central Hex Bolt
+      const boltGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.025, 6);
+      const boltMat = new THREE.MeshStandardMaterial({ color: "#94a3b8", metalness: 0.8, roughness: 0.2 });
+      rotor.add(new THREE.Mesh(boltGeo, boltMat));
+
+      // 3 Bristle Arms
+      for (let a = 0; a < 3; a++) {
+        const armGeo = new THREE.BoxGeometry(0.03, 0.015, 0.15);
+        armGeo.translate(0, 0, 0.075);
+        const armMat = new THREE.MeshStandardMaterial({ color: "#38bdf8", roughness: 0.3 });
+        const armMesh = new THREE.Mesh(armGeo, armMat);
+        armMesh.rotation.y = (Math.PI * 2 * a) / 3;
+        rotor.add(armMesh);
+      }
+      return rotor;
+    }
+
+    const brushLeft = createBrushRotor();
+    brushLeft.position.set(-0.46, 0.025, -0.42);
     roombaGroup.add(brushLeft);
 
-    const brushRight = new THREE.Mesh(brushGeo, brushMat);
-    brushRight.position.set(0.45, 0.02, -0.4);
+    const brushRight = createBrushRotor();
+    brushRight.position.set(0.46, 0.025, -0.42);
     roombaGroup.add(brushRight);
 
+    // 9. Forward Headlights / Spotlight Beams
+    function createHeadlight(xPos) {
+      const spot = new THREE.SpotLight("#fffbeb", 1.8, 14, Math.PI / 7, 0.45, 1.2);
+      spot.position.set(xPos, 0.14, -0.48);
+      const target = new THREE.Object3D();
+      target.position.set(xPos, 0, -6);
+      scene.add(target);
+      spot.target = target;
+      roombaGroup.add(spot);
+      return spot;
+    }
+
+    createHeadlight(-0.28);
+    createHeadlight(0.28);
+
+    // 10. Dynamic Cyan LED Ground Underglow Light
+    const underglowLight = new THREE.PointLight("#06b6d4", 1.8, 3.5, 2.0);
+    underglowLight.position.set(0, 0.06, 0);
+    roombaGroup.add(underglowLight);
+
     // Contact Ground Shadow Disc
-    const shadowGeo = new THREE.CircleGeometry(0.75, 24);
+    const shadowGeo = new THREE.CircleGeometry(0.78, 28);
     shadowGeo.rotateX(-Math.PI / 2);
     const shadowMat = new THREE.MeshBasicMaterial({
       color: "#000000",
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.5,
     });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     shadowMesh.position.y = 0.01;
     scene.add(shadowMesh);
 
-    // 4. Procedural Track Chunks
+    // 11. Procedural Track Chunks
     const trackChunks = [];
     const chunkFloorGeo = new THREE.BoxGeometry(7.2, 0.1, CHUNK_LENGTH);
-    const chunkFloorMat = new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.6 });
+    const chunkFloorMat = new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.55, metalness: 0.08 });
 
     const dividerGeo = new THREE.BoxGeometry(0.06, 0.01, CHUNK_LENGTH);
     const dividerMat = new THREE.MeshBasicMaterial({ color: "#fef3c7", transparent: true, opacity: 0.65 });
@@ -202,7 +309,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       trackChunks.push(createChunk(-i * CHUNK_LENGTH));
     }
 
-    // 5. Obstacles & Collectibles Pool
+    // 12. Obstacles & Collectibles Pool
     const activeObstacles = [];
     const activeDust = [];
 
@@ -227,9 +334,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     }
 
     function spawnChunkContent(chunkZ) {
-      // Safe runway: never spawn hazards in the first 45 meters
       if (chunkZ > -45) {
-        // Only spawn welcome dust bunnies on runway
         for (let j = 0; j < 4; j++) {
           const dMesh = new THREE.Mesh(dustGeo, dustMat);
           dMesh.position.set(0, 0.3, chunkZ - 8 - j * 3.5);
@@ -246,12 +351,10 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       let typeStr;
 
       if (obsType < 0.35) {
-        // Ground Cord -> Jump required
         obsMesh = new THREE.Mesh(cordGeo, cordMat);
         obsMesh.position.set(obsLane * LANE_WIDTH, 0.11, chunkZ - 18);
         typeStr = "cord";
       } else if (obsType < 0.7) {
-        // Low Coffee Table -> Duck required
         obsMesh = new THREE.Group();
         const top = new THREE.Mesh(tableGeo, tableMat);
         top.position.y = 0.85;
@@ -267,7 +370,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         obsMesh.position.set(obsLane * LANE_WIDTH, 0, chunkZ - 20);
         typeStr = "table";
       } else {
-        // Cardboard Box -> Lane switch required
         obsMesh = new THREE.Mesh(boxGeo, boxMat);
         obsMesh.position.set(obsLane * LANE_WIDTH, 0.9, chunkZ - 22);
         typeStr = "box";
@@ -277,7 +379,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       scene.add(obsMesh);
       activeObstacles.push({ mesh: obsMesh, lane: obsLane, type: typeStr });
 
-      // Spawn Dust in alternate lane
       const dustLane = lanes[1];
       for (let j = 0; j < 4; j++) {
         const dMesh = new THREE.Mesh(dustGeo, dustMat);
@@ -287,12 +388,10 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       }
     }
 
-    // Populate track with safe starting layout
     trackChunks.forEach((c) => {
       spawnChunkContent(c.z);
     });
 
-    // Provide robust restart runner
     restartRef.current = () => {
       const s = stateRef.current;
       clearAllEntities();
@@ -312,7 +411,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       s.trauma = 0;
       s.invincibleTimer = 2.0;
 
-      // Reset chunks
       trackChunks.forEach((c, idx) => {
         c.group.position.z = -idx * CHUNK_LENGTH;
         spawnChunkContent(c.group.position.z);
@@ -322,12 +420,10 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       playDockChime();
     };
 
-    // 6. Keyboard input listener with preventDefault
     const handleKey = (e) => {
       const k = e.key ? e.key.toLowerCase() : "";
       const s = stateRef.current;
 
-      // Prevent window scroll / back navigation on game keys
       if (
         k === "arrowleft" ||
         k === "arrowright" ||
@@ -357,7 +453,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     };
     window.addEventListener("keydown", handleKey);
 
-    // 7. Animation Game Loop
     let lastTime = performance.now();
     let animId;
     let lastHudSyncTime = 0;
@@ -379,14 +474,12 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           s.invincibleTimer -= dt;
         }
 
-        // Horizontal lane lerping with NaN protection
         const targetX = isNaN(s.targetX) ? 0 : s.targetX;
         let currentX = isNaN(s.playerX) ? 0 : s.playerX;
         const dx = targetX - currentX;
         currentX += dx * 16 * dt;
         s.playerX = currentX;
 
-        // Vertical jump physics
         if (s.isJumping) {
           s.velocityY -= 26 * dt;
           s.playerY += s.velocityY * dt;
@@ -397,7 +490,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           }
         }
 
-        // Suction slide
         if (s.isSliding) {
           s.slideTimer -= dt;
           if (s.slideTimer <= 0) {
@@ -409,7 +501,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           s.magnetTime = Math.max(0, s.magnetTime - dt);
         }
 
-        // Update Roomba mesh
+        // Transforms
         roombaGroup.position.set(currentX, s.playerY, 0);
 
         const rollAngle = -dx * 0.08;
@@ -418,14 +510,20 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         const scaleY = s.isSliding ? 0.45 : s.isJumping ? 1.2 : 1.0;
         roombaGroup.scale.set(1.0, scaleY, 1.0);
 
-        brushLeft.rotation.y += dt * 18;
-        brushRight.rotation.y -= dt * 18;
+        // Velocity-Scaled Side Brush Rotation
+        const brushSpeed = s.speed * 1.5;
+        brushLeft.rotation.y += dt * brushSpeed;
+        brushRight.rotation.y -= dt * brushSpeed;
+
+        // Halo LED Pulse
+        const haloIntensity = 2.4 + Math.sin(currentTime * 0.005) * 0.8;
+        haloMat.emissiveIntensity = haloIntensity;
 
         // Ground shadow
         shadowMesh.position.x = currentX;
         const shadowScale = Math.max(0.3, 1.0 - (s.playerY - 0.1) * 0.6);
         shadowMesh.scale.set(shadowScale, shadowScale, shadowScale);
-        shadowMat.opacity = Math.max(0.1, 0.45 - (s.playerY - 0.1) * 0.25);
+        shadowMat.opacity = Math.max(0.1, 0.5 - (s.playerY - 0.1) * 0.25);
 
         // Track chunk recycling
         trackChunks.forEach((c) => {
@@ -440,7 +538,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           }
         });
 
-        // Obstacles movement & collision
+        // Obstacles collision
         for (let i = activeObstacles.length - 1; i >= 0; i--) {
           const obs = activeObstacles[i];
           obs.mesh.position.z += s.speed * dt;
@@ -448,13 +546,12 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           const dz = Math.abs(obs.mesh.position.z - 0);
           const dxObs = Math.abs(obs.mesh.position.x - currentX);
 
-          // Test AABB overlap only when player is not invincible
           if (s.invincibleTimer <= 0 && dz < 0.85 && dxObs < 0.8) {
             let cleared = false;
             if (obs.type === "cord" && s.playerY > 0.4) {
-              cleared = true; // Cleared by jump
+              cleared = true;
             } else if (obs.type === "table" && s.isSliding && s.playerY <= 0.25) {
-              cleared = true; // Cleared by duck
+              cleared = true;
             }
 
             if (!cleared) {
@@ -502,7 +599,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           }
         }
 
-        // Throttle HUD and parent updates to 5 times/sec (200ms) to prevent render thrashing
         if (currentTime - lastHudSyncTime > 200) {
           lastHudSyncTime = currentTime;
           setHudStats((prev) => ({
@@ -514,7 +610,6 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
         }
       }
 
-      // Camera Follow Rig & Centrifugal Banking
       const targetCamX = (isNaN(s.playerX) ? 0 : s.playerX) * 0.4;
       camera.position.x += (targetCamX - camera.position.x) * 8 * dt;
 
@@ -554,7 +649,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       }
       if (renderer) renderer.dispose();
     };
-  }, []); // Mount ONCE - no re-mounting when parent re-renders!
+  }, []);
 
   return (
     <div className="runner-3d-wrapper">

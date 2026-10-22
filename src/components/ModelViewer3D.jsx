@@ -10,7 +10,7 @@ export function ModelViewer3D({ deformation, isHitstopActive, cameraShake }) {
     const loop = () => {
       if (!active) return;
       if (!isHitstopActive) {
-        setBrushAngle((prev) => (prev + 12) % 360);
+        setBrushAngle((prev) => (prev + 14) % 360);
       }
       animId = requestAnimationFrame(loop);
     };
@@ -29,12 +29,12 @@ export function ModelViewer3D({ deformation, isHitstopActive, cameraShake }) {
   return (
     <div className="model-viewer-3d-card" data-testid="model-viewer-3d">
       <div className="viewer-header">
-        <span className="viewer-tag">BLENDER 3D MODEL & SHADOW ENGINE</span>
-        <span className="viewer-fps">60 FPS • PBR SHADED</span>
+        <span className="viewer-tag">HD HERO ROOMBA & BLENDER STAGE</span>
+        <span className="viewer-fps">60 FPS • PBR CLEARCOAT</span>
       </div>
 
       <div className="viewer-stage">
-        {/* Soft Radial Contact Shadow underneath Roomba */}
+        {/* Soft Radial Contact Shadow Disc directly underneath */}
         <div
           className="contact-shadow-disc"
           style={{
@@ -51,24 +51,46 @@ export function ModelViewer3D({ deformation, isHitstopActive, cameraShake }) {
             transition: deformation?.isSquashing ? "none" : "transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)",
           }}
         >
-          {/* Main Slate Chassis */}
-          <div className="mesh-chassis">
-            {/* Front Rubber Bumper */}
-            <div className="mesh-bumper" />
+          {/* Main Slate Chassis with Beveled Specular Rim */}
+          <div className="mesh-chassis hd-chassis">
+            {/* Beveled Metallic Rim Ring */}
+            <div className="mesh-beveled-rim" />
 
-            {/* Glossy Cyan Sensor Turret */}
-            <div className="mesh-turret">
-              <span className="turret-lens" />
+            {/* Recessed Dark Panel Shutline */}
+            <div className="mesh-shutline" />
+
+            {/* Brushed Gunmetal Faceplate Inlay */}
+            <div className="mesh-faceplate">
+              {/* Glowing Halo LED Clean Button */}
+              <div className="mesh-clean-button">
+                <div className="clean-halo-ring" />
+                <span className="clean-label">CLEAN</span>
+              </div>
+            </div>
+
+            {/* Heavy-Duty Matte Rubber Bumper */}
+            <div className="mesh-bumper hd-bumper">
+              {/* Twin Forward Headlight Beams */}
+              <div className="bumper-headlight light-left" />
+              <div className="bumper-headlight light-right" />
+            </div>
+
+            {/* High-Gloss LiDAR Sensor Turret with Optics */}
+            <div className="mesh-turret hd-turret">
+              <div className="turret-optic-chamber">
+                <span className="laser-diode" />
+              </div>
             </div>
 
             {/* Status LED Beacon */}
             <div className="mesh-led-beacon" />
 
-            {/* Whirling Dual Bristle Brushes */}
+            {/* Whirling Dual Bristle Brushes with Hex Mounting Bolt */}
             <div
               className="mesh-brush brush-left"
               style={{ transform: `rotate(${brushAngle}deg)` }}
             >
+              <span className="rotor-bolt" />
               <span className="bristle b1" />
               <span className="bristle b2" />
               <span className="bristle b3" />
@@ -77,12 +99,13 @@ export function ModelViewer3D({ deformation, isHitstopActive, cameraShake }) {
               className="mesh-brush brush-right"
               style={{ transform: `rotate(${-brushAngle}deg)` }}
             >
+              <span className="rotor-bolt" />
               <span className="bristle b1" />
               <span className="bristle b2" />
               <span className="bristle b3" />
             </div>
 
-            {/* Cyan Neon Underglow */}
+            {/* Dynamic Cyan Neon Underglow */}
             <div className="mesh-underglow" />
           </div>
         </div>
@@ -90,8 +113,8 @@ export function ModelViewer3D({ deformation, isHitstopActive, cameraShake }) {
 
       <div className="viewer-footer">
         <span>📐 Triangles: 3,450</span>
-        <span>⚡ PBR Clearcoat + Contact Shadow</span>
-        <span>🌀 Centrifugal Bank: {rotDeg}°</span>
+        <span>✨ PBR Gunmetal & Clearcoat</span>
+        <span>⚡ Dynamic Headlights + Underglow</span>
       </div>
     </div>
   );

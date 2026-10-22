@@ -165,7 +165,7 @@ body {
   color: var(--accent-gold);
 }
 
-/* On-Screen Touch Controls for Runner */
+/* On-Screen Touch Controls */
 .runner-touch-controls {
   position: absolute;
   bottom: 14px;
@@ -515,7 +515,9 @@ body {
 .Roomba > span.left { transform: rotate(180deg); }
 .Roomba > span.up { transform: rotate(270deg); }
 
-/* Model Viewer 3D */
+/* ================================================= */
+/* HIGH-DEFINITION ROOMBA STAGE STYLES               */
+/* ================================================= */
 .model-viewer-3d-card {
   width: 380px;
   height: 380px;
@@ -550,74 +552,168 @@ body {
 
 .contact-shadow-disc {
   position: absolute;
-  width: 170px;
-  height: 170px;
+  width: 180px;
+  height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.75) 0%, transparent 70%);
-  bottom: 30px;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
+  bottom: 28px;
   pointer-events: none;
 }
 
 .roomba-3d-mesh {
   position: relative;
-  width: 150px;
-  height: 150px;
+  width: 160px;
+  height: 160px;
   z-index: 2;
 }
 
-.mesh-chassis {
+.mesh-chassis.hd-chassis {
   width: 100%;
   height: 100%;
   border-radius: 50%;
   background: radial-gradient(circle at 45% 35%, #334155 0%, #1e293b 70%, #0f172a 100%);
-  border: 3px solid #475569;
+  border: 2px solid #64748b;
   position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.6);
 }
 
-.mesh-bumper {
+/* Beveled Outer Specular Edge */
+.mesh-beveled-rim {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+/* Recessed Panel Shutline Seam */
+.mesh-shutline {
+  position: absolute;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  border: 2px solid #090d16;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+/* Brushed Gunmetal Faceplate Inlay */
+.mesh-faceplate {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #475569 0%, #334155 50%, #1e293b 100%);
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.25);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Glowing Halo LED Clean Button */
+.mesh-clean-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #0f172a;
+  border: 2px solid #06b6d4;
+  box-shadow: 0 0 12px rgba(6, 182, 212, 0.8), inset 0 0 8px rgba(6, 182, 212, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  animation: halo-pulse 2s infinite alternate ease-in-out;
+}
+
+@keyframes halo-pulse {
+  from { box-shadow: 0 0 8px rgba(6, 182, 212, 0.6); }
+  to { box-shadow: 0 0 18px rgba(6, 182, 212, 1.0); }
+}
+
+.clean-label {
+  font-size: 0.5rem;
+  font-weight: 800;
+  color: #06b6d4;
+  letter-spacing: 0.05em;
+}
+
+/* Heavy-Duty Rubber Front Bumper */
+.mesh-bumper.hd-bumper {
   position: absolute;
   top: -4px;
-  width: 120px;
-  height: 22px;
+  width: 126px;
+  height: 24px;
   border-radius: 12px 12px 0 0;
   background: #090d16;
+  border-top: 2px solid #475569;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
-.mesh-turret {
-  width: 54px;
-  height: 54px;
+/* Twin Forward Headlights */
+.bumper-headlight {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fffbeb;
+  box-shadow: 0 0 10px #fffbeb, 0 0 20px #fef08a;
+  margin-top: 6px;
+}
+
+/* High-Gloss LiDAR Turret */
+.mesh-turret.hd-turret {
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 30%, #38bdf8 0%, #0284c7 60%, #0369a1 100%);
+  position: absolute;
+  top: 14px;
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
 }
 
-.turret-lens {
-  width: 16px;
-  height: 16px;
+.turret-optic-chamber {
+  width: 22px;
+  height: 10px;
+  border-radius: 4px;
+  background: #090d16;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.laser-diode {
+  width: 4px;
+  height: 4px;
   border-radius: 50%;
-  background: #0f172a;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
 }
 
 .mesh-led-beacon {
   position: absolute;
-  top: 28px;
-  width: 10px;
-  height: 10px;
+  top: 64px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #10b981;
-  box-shadow: 0 0 10px #10b981;
+  box-shadow: 0 0 8px #10b981;
 }
 
 .mesh-brush {
   position: absolute;
   top: -8px;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -626,16 +722,34 @@ body {
 .brush-left { left: 8px; }
 .brush-right { right: 8px; }
 
+.rotor-bolt {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #94a3b8;
+  border-radius: 2px;
+  z-index: 3;
+}
+
 .bristle {
   position: absolute;
   width: 2px;
-  height: 26px;
+  height: 28px;
   background: #38bdf8;
 }
 
 .bristle.b1 { transform: rotate(0deg); }
 .bristle.b2 { transform: rotate(60deg); }
 .bristle.b3 { transform: rotate(120deg); }
+
+.mesh-underglow {
+  position: absolute;
+  width: 120%;
+  height: 120%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.55) 0%, transparent 65%);
+  pointer-events: none;
+}
 
 .viewer-footer {
   display: flex;
@@ -727,6 +841,15 @@ body {
 .particle {
   position: absolute;
   font-size: 1.1rem;
+}
+
+.error-fallback-card {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  color: #fff;
 }
 
 .game-footer {
