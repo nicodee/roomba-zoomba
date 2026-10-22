@@ -1,7 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
-import { playDustChime, playImpactThud, playDockChime } from "../../utils/audioSynth";
-import { BlueprintMiniMap } from "./BlueprintMiniMap";
+import {
+  playDustChime,
+  playImpactThud,
+  playDockChime,
+  playRoomClearFanfare,
+  playThresholdThud,
+} from "../../utils/audioSynth";
+import { BlueprintMiniMap, HOUSE_ZONES, getCurrentZone } from "./BlueprintMiniMap";
+import { RoomVictoryModal } from "./RoomVictoryModal";
 
 const LANE_WIDTH = 2.2;
 const CHUNK_LENGTH = 40;
@@ -10,6 +17,7 @@ const INITIAL_SPEED = 14;
 export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
   const mountRef = useRef(null);
   const restartRef = useRef(null);
+  const proceedNextRoomRef = useRef(null);
 
   const stateRef = useRef({
     lane: 0,
@@ -27,6 +35,12 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     isDead: false,
     trauma: 0,
     invincibleTimer: 2.0,
+    // Room level mission state
+    activeZoneIndex: 0,
+    dustInActiveRoom: 0,
+    isDoorUnlocked: false,
+    roomStartTime: performance.now(),
+    battery: 100,
   });
 
   const [hudStats, setHudStats] = useState({
@@ -35,39 +49,52 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     magnetTime: 0,
     isDead: false,
     lane: 0,
+    activeZoneIndex: 0,
+    dustInActiveRoom: 0,
+    roomCleanliness: 0,
+    isDoorUnlocked: false,
+    battery: 100,
   });
+
+  const [victoryState, setVictoryState] = useState(null);
 
   const triggerJump = useCallback(() => {
     const s = stateRef.current;
-    if (!s.isJumping && !s.isSliding && !s.isDead) {
+    if (!s.isJumping && !s.isSliding && !s.isDead && !victoryState) {
       s.isJumping = true;
       s.velocityY = 7.8;
     }
-  }, []);
+  }, [victoryState]);
 
   const triggerSlide = useCallback(() => {
     const s = stateRef.current;
-    if (s.isDead) return;
+    if (s.isDead || victoryState) return;
     if (s.isJumping) {
       s.velocityY = -18;
     } else if (!s.isSliding) {
       s.isSliding = true;
       s.slideTimer = 0.65;
     }
-  }, []);
+  }, [victoryState]);
 
   const switchLane = useCallback((dir) => {
     const s = stateRef.current;
-    if (s.isDead) return;
+    if (s.isDead || victoryState) return;
     const nextLane = Math.max(-1, Math.min(1, s.lane + dir));
     s.lane = nextLane;
     s.targetX = nextLane * LANE_WIDTH;
     setHudStats((prev) => ({ ...prev, lane: nextLane }));
-  }, []);
+  }, [victoryState]);
 
   const handleRestart = useCallback(() => {
     if (restartRef.current) {
       restartRef.current();
+    }
+  }, []);
+
+  const handleProceedNextRoom = useCallback(() => {
+    if (proceedNextRoomRef.current) {
+      proceedNextRoomRef.current();
     }
   }, []);
 
@@ -108,12 +135,12 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     scene.add(sunLight);
 
     // ==========================================
-    // HIGH-DEFINITION HERO ROOMBA MODEL ASSEMBLY
+    // HERO ROOMBA MODEL ASSEMBLY
     // ==========================================
     const roombaGroup = new THREE.Group();
     scene.add(roombaGroup);
 
-    // 1. Base Dark Slate Chassis Body
+    // Chassis
     const chassisGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.18, 36);
     const chassisMat = new THREE.MeshStandardMaterial({
       color: "#1e293b",
@@ -125,49 +152,36 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     chassisMesh.position.y = 0.09;
     roombaGroup.add(chassisMesh);
 
-    // 2. Beveled Outer Edge Specular Rim
+    // Beveled Rim
     const rimGeo = new THREE.TorusGeometry(0.65, 0.025, 16, 48);
     rimGeo.rotateX(Math.PI / 2);
-    const rimMat = new THREE.MeshStandardMaterial({
-      color: "#475569",
-      roughness: 0.25,
-      metalness: 0.6,
-    });
+    const rimMat = new THREE.MeshStandardMaterial({ color: "#475569", roughness: 0.25, metalness: 0.6 });
     const rimMesh = new THREE.Mesh(rimGeo, rimMat);
     rimMesh.position.y = 0.18;
     roombaGroup.add(rimMesh);
 
-    // 3. Recessed Dark Panel Seam (Shutline)
+    // Shutline
     const seamGeo = new THREE.TorusGeometry(0.52, 0.012, 12, 48);
     seamGeo.rotateX(Math.PI / 2);
-    const seamMat = new THREE.MeshBasicMaterial({ color: "#090d16" });
-    const seamMesh = new THREE.Mesh(seamGeo, seamMat);
+    const seamMesh = new THREE.Mesh(seamGeo, new THREE.MeshBasicMaterial({ color: "#090d16" }));
     seamMesh.position.y = 0.182;
     roombaGroup.add(seamMesh);
 
-    // 4. Brushed Gunmetal Faceplate Inlay
+    // Faceplate
     const faceplateGeo = new THREE.CylinderGeometry(0.50, 0.50, 0.02, 36);
-    const faceplateMat = new THREE.MeshStandardMaterial({
-      color: "#334155",
-      roughness: 0.35,
-      metalness: 0.75,
-    });
+    const faceplateMat = new THREE.MeshStandardMaterial({ color: "#334155", roughness: 0.35, metalness: 0.75 });
     const faceplateMesh = new THREE.Mesh(faceplateGeo, faceplateMat);
     faceplateMesh.position.y = 0.185;
     roombaGroup.add(faceplateMesh);
 
-    // 5. Heavy-Duty Matte Rubber Front Bumper
+    // Rubber Bumper
     const bumperGeo = new THREE.BoxGeometry(0.92, 0.15, 0.28);
-    const bumperMat = new THREE.MeshStandardMaterial({
-      color: "#0f172a",
-      roughness: 0.85,
-      metalness: 0.05,
-    });
+    const bumperMat = new THREE.MeshStandardMaterial({ color: "#0f172a", roughness: 0.85, metalness: 0.05 });
     const bumperMesh = new THREE.Mesh(bumperGeo, bumperMat);
     bumperMesh.position.set(0, 0.09, -0.45);
     roombaGroup.add(bumperMesh);
 
-    // 6. Glowing Halo LED Clean Button
+    // Halo LED Clean Button
     const haloGeo = new THREE.TorusGeometry(0.12, 0.018, 16, 32);
     haloGeo.rotateX(Math.PI / 2);
     const haloMat = new THREE.MeshStandardMaterial({
@@ -186,30 +200,24 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     buttonMesh.position.set(0, 0.195, 0.08);
     roombaGroup.add(buttonMesh);
 
-    // 7. LiDAR Turret with Inner Optical Chamber & Lens
+    // Turret with Optics
     const turretGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.08, 28);
-    const turretMat = new THREE.MeshStandardMaterial({
-      color: "#0284c7",
-      roughness: 0.12,
-      metalness: 0.40,
-    });
+    const turretMat = new THREE.MeshStandardMaterial({ color: "#0284c7", roughness: 0.12, metalness: 0.40 });
     const turretMesh = new THREE.Mesh(turretGeo, turretMat);
     turretMesh.position.set(0, 0.22, -0.06);
     roombaGroup.add(turretMesh);
 
     const opticGeo = new THREE.BoxGeometry(0.12, 0.03, 0.08);
-    const opticMat = new THREE.MeshBasicMaterial({ color: "#090d16" });
-    const opticMesh = new THREE.Mesh(opticGeo, opticMat);
+    const opticMesh = new THREE.Mesh(opticGeo, new THREE.MeshBasicMaterial({ color: "#090d16" }));
     opticMesh.position.set(0, 0.23, -0.15);
     roombaGroup.add(opticMesh);
 
     const diodeGeo = new THREE.SphereGeometry(0.018, 12, 12);
-    const diodeMat = new THREE.MeshBasicMaterial({ color: "#ef4444" });
-    const diodeMesh = new THREE.Mesh(diodeGeo, diodeMat);
+    const diodeMesh = new THREE.Mesh(diodeGeo, new THREE.MeshBasicMaterial({ color: "#ef4444" }));
     diodeMesh.position.set(0, 0.23, -0.17);
     roombaGroup.add(diodeMesh);
 
-    // 8. Dual Whirling Bristle Brushes with Mounting Hex Bolts
+    // Bristle Brushes
     function createBrushRotor() {
       const rotor = new THREE.Group();
       const boltGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.025, 6);
@@ -235,7 +243,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     brushRight.position.set(0.46, 0.025, -0.42);
     roombaGroup.add(brushRight);
 
-    // 9. Forward Headlights / Spotlight Beams
+    // Headlights
     function createHeadlight(xPos) {
       const spot = new THREE.SpotLight("#fffbeb", 1.8, 14, Math.PI / 7, 0.45, 1.2);
       spot.position.set(xPos, 0.14, -0.48);
@@ -250,24 +258,22 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     createHeadlight(-0.28);
     createHeadlight(0.28);
 
-    // 10. Dynamic Cyan LED Ground Underglow Light
+    // Underglow Light
     const underglowLight = new THREE.PointLight("#06b6d4", 1.8, 3.5, 2.0);
     underglowLight.position.set(0, 0.06, 0);
     roombaGroup.add(underglowLight);
 
-    // Contact Ground Shadow Disc
+    // Ground Shadow
     const shadowGeo = new THREE.CircleGeometry(0.78, 28);
     shadowGeo.rotateX(-Math.PI / 2);
-    const shadowMat = new THREE.MeshBasicMaterial({
-      color: "#000000",
-      transparent: true,
-      opacity: 0.5,
-    });
+    const shadowMat = new THREE.MeshBasicMaterial({ color: "#000000", transparent: true, opacity: 0.5 });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     shadowMesh.position.y = 0.01;
     scene.add(shadowMesh);
 
-    // 11. Procedural Track Chunks
+    // ==========================================
+    // TRACK CHUNKS & DOORWAY THRESHOLDS
+    // ==========================================
     const trackChunks = [];
     const chunkFloorGeo = new THREE.BoxGeometry(7.2, 0.1, CHUNK_LENGTH);
     const chunkFloorMat = new THREE.MeshStandardMaterial({ color: "#d97706", roughness: 0.55, metalness: 0.08 });
@@ -275,7 +281,15 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
     const dividerGeo = new THREE.BoxGeometry(0.06, 0.01, CHUNK_LENGTH);
     const dividerMat = new THREE.MeshBasicMaterial({ color: "#fef3c7", transparent: true, opacity: 0.65 });
 
-    function createChunk(zOffset) {
+    // Doorway Arch Materials
+    const archMat = new THREE.MeshStandardMaterial({ color: "#78350f", roughness: 0.7 });
+    const doorBeamMat = new THREE.MeshStandardMaterial({
+      color: "#f59e0b",
+      emissive: "#f59e0b",
+      emissiveIntensity: 1.5,
+    });
+
+    function createChunk(zOffset, isDoorChunk = false) {
       const chunkGroup = new THREE.Group();
       chunkGroup.position.z = zOffset;
 
@@ -301,15 +315,46 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       bRight.position.set(3.6, 0.4, 0);
       chunkGroup.add(bRight);
 
+      // Doorway Archway on threshold chunks
+      let doorIndicator = null;
+      if (isDoorChunk) {
+        const archLeft = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.5, 0.4), archMat);
+        archLeft.position.set(-3.5, 1.75, 0);
+        chunkGroup.add(archLeft);
+
+        const archRight = new THREE.Mesh(new THREE.BoxGeometry(0.4, 3.5, 0.4), archMat);
+        archRight.position.set(3.5, 1.75, 0);
+        chunkGroup.add(archRight);
+
+        const archTop = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.4, 0.4), archMat);
+        archTop.position.set(0, 3.5, 0);
+        chunkGroup.add(archTop);
+
+        // Illuminated Door Header Beam (green when unlocked, amber when cleaning)
+        doorIndicator = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.15, 0.2), doorBeamMat);
+        doorIndicator.position.set(0, 3.3, 0);
+        chunkGroup.add(doorIndicator);
+
+        // Raised Brass T-Molding Floor Threshold
+        const tmolding = new THREE.Mesh(
+          new THREE.BoxGeometry(7.2, 0.04, 0.2),
+          new THREE.MeshStandardMaterial({ color: "#d97706", metalness: 0.9, roughness: 0.2 })
+        );
+        tmolding.position.set(0, 0.07, 0);
+        chunkGroup.add(tmolding);
+      }
+
       scene.add(chunkGroup);
-      return { group: chunkGroup, z: zOffset };
+      return { group: chunkGroup, z: zOffset, isDoorChunk, doorIndicator };
     }
 
     for (let i = 0; i < 4; i++) {
-      trackChunks.push(createChunk(-i * CHUNK_LENGTH));
+      trackChunks.push(createChunk(-i * CHUNK_LENGTH, i === 1 || i === 3));
     }
 
-    // 12. Obstacles & Collectibles Pool
+    // ==========================================
+    // PROCEDURAL ENTITIES & SPAWNING
+    // ==========================================
     const activeObstacles = [];
     const activeDust = [];
 
@@ -410,14 +455,47 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       s.isDead = false;
       s.trauma = 0;
       s.invincibleTimer = 2.0;
+      s.activeZoneIndex = 0;
+      s.dustInActiveRoom = 0;
+      s.isDoorUnlocked = false;
+      s.roomStartTime = performance.now();
+      s.battery = 100;
 
       trackChunks.forEach((c, idx) => {
         c.group.position.z = -idx * CHUNK_LENGTH;
         spawnChunkContent(c.group.position.z);
       });
 
-      setHudStats({ distance: 0, dust: 0, magnetTime: 0, isDead: false, lane: 0 });
+      setVictoryState(null);
+      setHudStats({
+        distance: 0,
+        dust: 0,
+        magnetTime: 0,
+        isDead: false,
+        lane: 0,
+        activeZoneIndex: 0,
+        dustInActiveRoom: 0,
+        roomCleanliness: 0,
+        isDoorUnlocked: false,
+        battery: 100,
+      });
       playDockChime();
+    };
+
+    proceedNextRoomRef.current = () => {
+      const s = stateRef.current;
+      const nextIndex = Math.min(HOUSE_ZONES.length - 1, s.activeZoneIndex + 1);
+      s.activeZoneIndex = nextIndex;
+      s.dustInActiveRoom = 0;
+      s.isDoorUnlocked = false;
+      s.roomStartTime = performance.now();
+      s.invincibleTimer = 2.0;
+
+      doorBeamMat.color.set("#f59e0b");
+      doorBeamMat.emissive.set("#f59e0b");
+
+      setVictoryState(null);
+      playThresholdThud();
     };
 
     const handleKey = (e) => {
@@ -466,12 +544,50 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
       const s = stateRef.current;
 
+      // Pause simulation progress if Victory Modal is up
+      if (victoryState) {
+        renderer.render(scene, camera);
+        return;
+      }
+
       if (!s.isDead) {
         s.distance += Math.round(s.speed * dt);
         s.speed = Math.min(26, s.speed + 0.12 * dt);
+        s.battery = Math.max(10, 100 - Math.round(s.distance * 0.15));
 
         if (s.invincibleTimer > 0) {
           s.invincibleTimer -= dt;
+        }
+
+        const activeZone = HOUSE_ZONES[s.activeZoneIndex] || HOUSE_ZONES[0];
+        const roomCleanliness = Math.min(100, (s.dustInActiveRoom / activeZone.dustQuota) * 100);
+
+        // Check door unlocking milestone
+        if (roomCleanliness >= 100 && !s.isDoorUnlocked) {
+          s.isDoorUnlocked = true;
+          doorBeamMat.color.set("#10b981");
+          doorBeamMat.emissive.set("#10b981");
+          doorBeamMat.emissiveIntensity = 3.0;
+          playDockChime();
+        }
+
+        // Check Door Threshold Crossing
+        if (s.isDoorUnlocked && s.distance >= activeZone.doorwayAt && !victoryState) {
+          playRoomClearFanfare();
+          playThresholdThud();
+
+          const elapsedSec = Math.round(((currentTime - s.roomStartTime) / 1000) * 10) / 10;
+          const coins = Math.round(s.dustInActiveRoom * 1.5);
+
+          setVictoryState({
+            roomName: activeZone.name,
+            nextRoomName: activeZone.nextRoom,
+            cleanTimeSeconds: elapsedSec,
+            dustCollected: s.dustInActiveRoom,
+            quota: activeZone.dustQuota,
+            batteryRemaining: s.battery,
+            coinsEarned: coins,
+          });
         }
 
         const targetX = isNaN(s.targetX) ? 0 : s.targetX;
@@ -533,6 +649,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           }
         });
 
+        // Obstacles collision
         for (let i = activeObstacles.length - 1; i >= 0; i--) {
           const obs = activeObstacles[i];
           obs.mesh.position.z += s.speed * dt;
@@ -564,6 +681,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           }
         }
 
+        // Dust collection
         for (let j = activeDust.length - 1; j >= 0; j--) {
           const d = activeDust[j];
           d.mesh.position.z += s.speed * dt;
@@ -578,10 +696,10 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
           if (distZ < 0.75 && distX < 0.8) {
             s.dustCount += 1;
-            playDustChime(Math.min(12, s.dustCount));
+            s.dustInActiveRoom += 1;
+            playDustChime(Math.min(12, s.dustInActiveRoom));
             scene.remove(d.mesh);
             activeDust.splice(j, 1);
-            setHudStats((prev) => ({ ...prev, dust: s.dustCount }));
             onDustCollect?.(s.dustCount);
             continue;
           }
@@ -594,11 +712,18 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
 
         if (currentTime - lastHudSyncTime > 200) {
           lastHudSyncTime = currentTime;
+          const cleanPct = Math.min(100, Math.round((s.dustInActiveRoom / activeZone.dustQuota) * 100));
           setHudStats((prev) => ({
             ...prev,
             distance: s.distance,
+            dust: s.dustCount,
             magnetTime: Math.round(s.magnetTime * 10) / 10,
             lane: s.lane,
+            activeZoneIndex: s.activeZoneIndex,
+            dustInActiveRoom: s.dustInActiveRoom,
+            roomCleanliness: cleanPct,
+            isDoorUnlocked: s.isDoorUnlocked,
+            battery: s.battery,
           }));
           onDistanceChange?.(s.distance);
         }
@@ -643,7 +768,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       }
       if (renderer) renderer.dispose();
     };
-  }, []);
+  }, [onDistanceChange, onDustCollect, onGameOver, triggerJump, triggerSlide, switchLane, victoryState]);
 
   return (
     <div className="runner-3d-layout">
@@ -651,15 +776,25 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
       <div className="runner-3d-wrapper">
         <div className="runner-viewport" ref={mountRef} />
 
-        {/* Floating In-Game HUD */}
+        {/* Floating In-Game Room Objective & Stats HUD */}
         <div className="runner-hud-panel">
           <div className="runner-stat-badge">
-            <span className="badge-label">DISTANCE</span>
-            <span className="badge-val">{hudStats.distance}m</span>
+            <span className="badge-label">
+              LVL {hudStats.activeZoneIndex + 1}: {HOUSE_ZONES[hudStats.activeZoneIndex]?.name.toUpperCase()}
+            </span>
+            <span className="badge-val">
+              {hudStats.roomCleanliness}% {hudStats.isDoorUnlocked ? "🟢 UNLOCKED" : "🧹 CLEANING"}
+            </span>
           </div>
           <div className="runner-stat-badge">
-            <span className="badge-label">DUST BUNNIES</span>
-            <span className="badge-val">⭐ {hudStats.dust}</span>
+            <span className="badge-label">ROOM DUST</span>
+            <span className="badge-val">
+              ⭐ {hudStats.dustInActiveRoom}/{HOUSE_ZONES[hudStats.activeZoneIndex]?.dustQuota}
+            </span>
+          </div>
+          <div className="runner-stat-badge">
+            <span className="badge-label">BATTERY</span>
+            <span className="badge-val">{hudStats.battery}% ⚡</span>
           </div>
         </div>
 
@@ -671,6 +806,7 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
           <button className="touch-btn" onClick={() => switchLane(1)}>➡️ Right (D)</button>
         </div>
 
+        {/* Crash Modal */}
         {hudStats.isDead && (
           <div className="runner-game-over-overlay">
             <div className="game-over-dialog">
@@ -686,13 +822,29 @@ export function RunnerCanvas({ onDistanceChange, onDustCollect, onGameOver }) {
             </div>
           </div>
         )}
+
+        {/* Room 100% Victory Modal */}
+        {victoryState && (
+          <RoomVictoryModal
+            roomName={victoryState.roomName}
+            nextRoomName={victoryState.nextRoomName}
+            cleanTimeSeconds={victoryState.cleanTimeSeconds}
+            dustCollected={victoryState.dustCollected}
+            quota={victoryState.quota}
+            batteryRemaining={victoryState.batteryRemaining}
+            coinsEarned={victoryState.coinsEarned}
+            onProceed={handleProceedNextRoom}
+          />
+        )}
       </div>
 
-      {/* Real-Time Architectural Blueprint Mini-Map on Side */}
+      {/* Real-Time Architectural Blueprint Mini-Map */}
       <BlueprintMiniMap
         distance={hudStats.distance}
         playerLane={hudStats.lane}
-        dustCount={hudStats.dust}
+        dustCount={hudStats.dustInActiveRoom}
+        roomCleanliness={hudStats.roomCleanliness}
+        isDoorUnlocked={hudStats.isDoorUnlocked}
       />
     </div>
   );

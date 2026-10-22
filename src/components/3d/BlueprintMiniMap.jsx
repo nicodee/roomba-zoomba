@@ -4,19 +4,21 @@ export const HOUSE_ZONES = [
   {
     id: "hallway",
     name: "Entry Hallway",
+    levelNumber: 1,
     startDist: 0,
     endDist: 60,
     dustQuota: 20,
     color: "#0284c7",
     doorwayAt: 60,
-    nextRoom: "Living Room",
+    nextRoom: "Grand Living Room",
   },
   {
     id: "living_room",
     name: "Grand Living Room",
+    levelNumber: 2,
     startDist: 60,
     endDist: 150,
-    dustQuota: 45,
+    dustQuota: 40,
     color: "#881337",
     doorwayAt: 150,
     nextRoom: "Chef's Kitchen",
@@ -24,9 +26,10 @@ export const HOUSE_ZONES = [
   {
     id: "kitchen",
     name: "Chef's Kitchen",
+    levelNumber: 3,
     startDist: 150,
     endDist: 240,
-    dustQuota: 40,
+    dustQuota: 35,
     color: "#10b981",
     doorwayAt: 240,
     nextRoom: "Master Patio",
@@ -42,25 +45,26 @@ export function getCurrentZone(distance) {
   return HOUSE_ZONES[HOUSE_ZONES.length - 1];
 }
 
-export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }) {
+export function BlueprintMiniMap({
+  distance = 0,
+  playerLane = 0,
+  dustCount = 0,
+  roomCleanliness = null,
+  isDoorUnlocked = false,
+}) {
   const currentZone = getCurrentZone(distance);
   const zoneProgress = Math.min(
     1,
     Math.max(0, (distance - currentZone.startDist) / (currentZone.endDist - currentZone.startDist))
   );
 
-  // Cleanliness percentage calculation based on collected dust
-  const cleanPercent = Math.min(100, Math.round((dustCount / currentZone.dustQuota) * 100));
+  const quota = currentZone.dustQuota || 20;
+  const computedPct = Math.min(100, Math.round((dustCount / quota) * 100));
+  const cleanPercent = roomCleanliness !== null && roomCleanliness !== undefined ? Math.min(100, Math.round(roomCleanliness)) : computedPct;
 
-  // Doorway radar proximity: flashes when within 20m of threshold
   const distToDoor = currentZone.doorwayAt - distance;
   const isDoorNear = distToDoor > 0 && distToDoor <= 20;
 
-  // Compute player normalized position on blueprint
-  // Blueprint coordinate system: 240x320 SVG viewBox
-  // Hallway: x: 80-160, y: 220-300
-  // Living Room: x: 30-210, y: 110-210
-  // Kitchen: x: 40-190, y: 20-100
   let beaconX = 120 + playerLane * 20;
   let beaconY = 280;
 
@@ -78,7 +82,9 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
     <div className="blueprint-minimap-card" data-testid="blueprint-minimap">
       <div className="blueprint-header">
         <span className="blueprint-title">📐 DOMESTIC FLOOR PLAN</span>
-        <span className="blueprint-zone-tag">{currentZone.name.toUpperCase()}</span>
+        <span className="blueprint-zone-tag">
+          LVL {currentZone.levelNumber}: {currentZone.name.toUpperCase()}
+        </span>
       </div>
 
       <div className="blueprint-svg-wrapper">
@@ -87,7 +93,6 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
           className="blueprint-svg"
           aria-label="House Floor Plan Blueprint"
         >
-          {/* Blueprint Grid Lines */}
           <defs>
             <pattern id="blueprint-grid" width="16" height="16" patternUnits="userSpaceOnUse">
               <path d="M 16 0 L 0 0 0 16" fill="none" stroke="rgba(6, 182, 212, 0.15)" strokeWidth="0.5" />
@@ -114,7 +119,6 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
               stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            {/* Kitchen Island Counter */}
             <rect x="85" y="45" width="70" height="30" fill="none" stroke="#64748b" strokeDasharray="3,3" strokeWidth="1" />
             <text x="40" y="38" className="room-label">KITCHEN</text>
             <text x="175" y="38" className="room-pct">
@@ -123,7 +127,14 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
           </g>
 
           {/* DOORWAY 2: French Door between Kitchen and Living Room */}
-          <line x1="100" y1="100" x2="140" y2="100" stroke="#f59e0b" strokeWidth="2.5" />
+          <line
+            x1="100"
+            y1="100"
+            x2="140"
+            y2="100"
+            stroke={currentZone.id === "living_room" && isDoorUnlocked ? "#10b981" : "#f59e0b"}
+            strokeWidth="2.5"
+          />
           <path d="M 100 100 A 20 20 0 0 1 120 120" fill="none" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" />
 
           {/* ZONE 2: GRAND LIVING ROOM */}
@@ -138,7 +149,6 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
               stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            {/* Area Rug Outline */}
             <rect x="50" y="130" width="140" height="60" fill="none" stroke="#f43f5e" strokeDasharray="4,4" strokeWidth="1" opacity="0.6" />
             <text x="30" y="128" className="room-label">LIVING ROOM</text>
             <text x="180" y="128" className="room-pct">
@@ -147,7 +157,14 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
           </g>
 
           {/* DOORWAY 1: Hallway Threshold & T-Molding */}
-          <line x1="95" y1="210" x2="145" y2="210" stroke="#f59e0b" strokeWidth="2.5" />
+          <line
+            x1="95"
+            y1="210"
+            x2="145"
+            y2="210"
+            stroke={currentZone.id === "hallway" && isDoorUnlocked ? "#10b981" : "#f59e0b"}
+            strokeWidth="2.5"
+          />
           <path d="M 145 210 A 25 25 0 0 1 120 235" fill="none" stroke="#f59e0b" strokeWidth="1" strokeDasharray="2,2" />
 
           {/* ZONE 1: ENTRY HALLWAY */}
@@ -162,7 +179,6 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
               stroke="#38bdf8"
               strokeWidth="1.5"
             />
-            {/* 3 Lane Guides */}
             <line x1="95" y1="225" x2="95" y2="295" stroke="rgba(255,255,255,0.2)" strokeDasharray="3,3" />
             <line x1="145" y1="225" x2="145" y2="295" stroke="rgba(255,255,255,0.2)" strokeDasharray="3,3" />
             <text x="78" y="238" className="room-label">ENTRY HALL</text>
@@ -179,7 +195,7 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
                 cy={currentZone.id === "hallway" ? 210 : 100}
                 r="12"
                 fill="none"
-                stroke="#f59e0b"
+                stroke={isDoorUnlocked ? "#10b981" : "#f59e0b"}
                 strokeWidth="2"
               >
                 <animate attributeName="r" from="4" to="16" dur="0.8s" repeatCount="indefinite" />
@@ -190,8 +206,9 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
                 y={currentZone.id === "hallway" ? 204 : 94}
                 className="radar-ping-text"
                 textAnchor="middle"
+                fill={isDoorUnlocked ? "#10b981" : "#f59e0b"}
               >
-                THRESHOLD IN {Math.round(distToDoor)}m!
+                {isDoorUnlocked ? `DOOR UNLOCKED (${Math.round(distToDoor)}m)` : `THRESHOLD IN ${Math.round(distToDoor)}m!`}
               </text>
             </g>
           )}
@@ -202,14 +219,11 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
             style={{ transform: `translate(${beaconX}px, ${beaconY}px)` }}
             data-testid="player-beacon"
           >
-            {/* Expanding Radar Ring */}
             <circle cx="0" cy="0" r="8" fill="rgba(6, 182, 212, 0.4)">
               <animate attributeName="r" from="4" to="14" dur="1.2s" repeatCount="indefinite" />
               <animate attributeName="opacity" from="0.8" to="0" dur="1.2s" repeatCount="indefinite" />
             </circle>
-            {/* Solid Beacon Puck */}
             <circle cx="0" cy="0" r="5" fill="#06b6d4" stroke="#ffffff" strokeWidth="1.5" />
-            {/* Direction Indicator */}
             <polygon points="0,-7 3,-3 -3,-3" fill="#ffffff" />
           </g>
         </svg>
@@ -221,8 +235,10 @@ export function BlueprintMiniMap({ distance = 0, playerLane = 0, dustCount = 0 }
           <span className="metric-val">{cleanPercent}%</span>
         </div>
         <div className="footer-metric">
-          <span className="metric-lbl">NEXT THRESHOLD</span>
-          <span className="metric-val">{Math.max(0, Math.round(distToDoor))}m</span>
+          <span className="metric-lbl">DOOR STATUS</span>
+          <span className={`metric-val ${isDoorUnlocked ? "door-open" : "door-locked"}`}>
+            {isDoorUnlocked ? "UNLOCKED 🟢" : "CLEANING 🔒"}
+          </span>
         </div>
       </div>
     </div>
