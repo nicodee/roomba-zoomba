@@ -1,0 +1,16 @@
+{
+  "generator": "Headless Asset Generator",
+  "dracoCompressed": true,
+  "shapeKeys": [
+    "Basis",
+    "Squash",
+    "Stretch"
+  ],
+  "materials": [
+    "Mat_Chassis",
+    "Mat_Turret",
+    "Mat_LED"
+  ],
+  "triangles": 3450,
+  "generatedAt": "2026-10-22T04:24:46.025Z"
+}
