@@ -2,17 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
-import { registerSW } from 'virtual:pwa-register';
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    console.log('New content available, reloading...');
-    updateSW(true);
-  },
-  onOfflineReady() {
-    console.log('App ready to work offline');
-  },
-});
+// Automatically unregister any stale service workers to prevent stale PWA caching
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister().catch(() => {});
+    }
+  }).catch(() => {});
+}
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
